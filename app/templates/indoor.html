@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="ko-kr">
+
+<head>
+	<!-- Required meta tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<!-- Bootstrap CSS -->
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+		integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+	<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
+	<title>한양대학교 공업 센터 본관</title>
+
+	<style>
+    html, body {
+      background-color: #031f30;
+      /* margin: 0;
+      max-width: 100%;
+      overflow: hidden; */
+    }
+    #log {
+      color: greenyellow;
+      font-size: 10pt;
+      padding: 10px;
+      overflow: auto;
+    }
+  </style>
+</head>
+
+<body>
+	<div class="container-fluid">
+		<div class="row mx-5">
+			<!-- <h5>한양대학교 공업 센터 본관</h5> -->
+			<div class="row g-1">
+				<div class="col-12">
+					<div class="row my-1">
+						<div class="col-6">
+							<div id="6F" class="border"></div>
+						</div>
+						<div class="col-6">
+							<div id="7F" class="border"></div>
+						</div>
+					</div>
+
+					<div class="row my-1">
+						<div class="col-6">
+							<div id="4F" class="border"></div>
+						</div>
+						<div class="col-6">
+							<div id="5F" class="border"></div>
+						</div>
+					</div>
+
+					<div class="row">
+						<div class="col-6">
+							<div id="2F" class="border"></div>
+						</div>
+						<div class="col-6">
+							<div id="3F" class="border"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+	integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+	crossorigin="anonymous"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="/static/js/plotly-latest.min.js"></script>
+
+<script>
+	let rescueCode = "{{ rescue_code }}";
+	const sizex = "{{ n_col - 1 }}";
+	const sizey = "{{ n_row - 1 }}";	
+
+	$(function() {
+		setInterval(
+			function(){
+				getData();
+			}, 700);			
+	});
+
+	function getRescueByCode(){
+		$.get({
+			url: `https://127.0.0.1:8086/dashboard/rescue/detail?rescueCode=${rescueCode}`,
+			async: false,
+			success: function(resp){
+				console.log(resp);
+			}
+		})
+	}
+
+	async function getData(){
+		const floors = [2, 3, 4, 5, 6, 7];
+		const promises = floors.map(getDataByFloor);
+		await Promise.all(promises);
+	}
+
+	function getDataByFloor(floor) {
+		$.get({
+			url: `/rescues/${rescueCode}/floors/${floor}/data`,
+			dataType: 'json',
+			success: function(resp) {
+				plot(floor, resp);
+			}
+		});
+	}
+
+	function plot(floor, resp) {
+		console.log(resp);
+		const markerSize = 0.25;
+		let x = resp.col;
+		let y = resp.row;
+		let z = resp.matrix;
+		let x1 = resp.col_;
+		let y1 = resp.row_;
+		let xPeak = resp.col_peak;
+		let yPeak = resp.row_peak;
+		
+		let trace1 = {
+			type: 'contour',
+			colorscale: 'Jet',
+			opacity: 0.5,
+			zmin: -120,
+			zmax: -30,
+			z: z
+		};
+
+		let layout = {
+			title: {
+				text:`${floor}F.`,
+				font: {
+					family: 'Courier New, monospace',
+					color: '#FFF',
+					// size: 15
+				},
+				x: 0.45, y: 0.95
+			},
+			plot_bgcolor: "#031f30",
+			paper_bgcolor: 'rgba(0,0,0,0)',
+			font: {
+				size: 10,
+				color: "#fff",
+			},
+			autosize: false,
+			width: 850,
+			height: 300,
+			margin: {l: 0, r: 0, b: 0, t: 30},
+			images: [
+				{
+					"source": z ? `/static/images/${floor}f.png`: '',
+					"xref": "x",
+					"yref": "y",
+					"x": 0,
+					"y": sizey,
+					"sizex": sizex,
+					"sizey": sizey,
+					"sizing": "stretch",
+					"opacity": 0.75,
+					"layer": "below"
+				}
+			],
+			shapes: [
+				{
+					type: 'circle',
+					xref: 'x',
+					yref: 'y',
+					x0: parseFloat(x1) - markerSize,
+					y0: parseFloat(y1) - markerSize,
+					x1: parseFloat(x1) + markerSize,
+					y1: parseFloat(y1) + markerSize,
+					opacity: 1.0,
+					fillcolor: 'red',
+					line: {
+						color: 'red',
+					}
+				},
+				{
+					type: 'rect',
+					xref: 'x',
+					yref: 'y',
+					x0: parseFloat(x) - markerSize,
+					y0: parseFloat(y) - markerSize,
+					x1: parseFloat(x) + markerSize,
+					y1: parseFloat(y) + markerSize,
+					opacity: 1.0,
+					fillcolor: 'purple',
+					line: {
+						color: 'purple',
+					}
+				},
+				{
+					type: 'circle',
+					xref: 'x',
+					yref: 'y',
+					x0: parseFloat(xPeak) - markerSize - 1,
+					y0: parseFloat(yPeak) - markerSize - 1,
+					x1: parseFloat(xPeak) + markerSize + 1,
+					y1: parseFloat(yPeak) + markerSize + 1,
+					// fillcolor: 'red',
+					line: {
+						// color: '#04ff00',
+            color: 'red',
+						// dash: 'dot',
+						width: 3
+					},
+					visible: floor == resp.floor_peak
+				},
+			],
+			xaxis: {
+				title: {
+					text: `${resp.lat ? resp.lat: ''} ${resp.lon ? resp.lon: ''} ${resp.status}`,
+					font: {
+						family: 'Courier New, monospace',
+						size: 18,
+						color: '#FFF'
+					}
+				},
+			}
+		};
+
+		if (resp.status == 'OUT OF BOUNDS') delete layout.shapes;
+		const config = { responsive: true };
+		Plotly.react(`${floor}F`, [trace1], layout, { displayModeBar: false }, config);
+	}
+</script>
+</body>
+
+</html>
